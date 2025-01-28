@@ -1,5 +1,6 @@
 // api/proxy.js
 const fetch = require('node-fetch');
+const { URL } = require('url');
 
 module.exports = async (req, res) => {
   // Handle preflight requests
@@ -26,25 +27,25 @@ module.exports = async (req, res) => {
       targetUrl = decodeURIComponent(encodedUrl);
       console.log('After first decode:', targetUrl);
 
-      // For YouTube URLs, we need to handle their special encoding
+      // For YouTube URLs, we need special handling
       if (targetUrl.includes('googlevideo.com')) {
-        // Handle YouTube's special encoding cases
-        targetUrl = targetUrl
-          // First handle triple-encoded slashes and other chars
-          .replace(/(%25252F)/g, '/')
-          .replace(/(%25253D)/g, '=')
-          .replace(/(%25253F)/g, '?')
-          .replace(/(%252526)/g, '&')
-          // Then handle double-encoded chars
-          .replace(/(%252F)/g, '/')
-          .replace(/(%253D)/g, '=')
-          .replace(/(%253F)/g, '?')
-          .replace(/(%2526)/g, '&')
-          // Finally handle single-encoded chars
-          .replace(/(%2F)/g, '/')
-          .replace(/(%3D)/g, '=')
-          .replace(/(%3F)/g, '?')
-          .replace(/(%26)/g, '&');
+        // Parse the URL to handle parameters correctly
+        const urlObj = new URL(targetUrl);
+        
+        // Get all parameters
+        const params = {};
+        urlObj.searchParams.forEach((value, key) => {
+          // Decode any remaining encoded values in parameters
+          try {
+            params[key] = decodeURIComponent(value);
+          } catch (e) {
+            params[key] = value;
+          }
+        });
+
+        // Reconstruct the URL with decoded parameters
+        urlObj.search = new URLSearchParams(params).toString();
+        targetUrl = urlObj.toString();
 
         console.log('After YouTube URL processing:', targetUrl);
       }
@@ -78,7 +79,8 @@ module.exports = async (req, res) => {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status} - ${response.statusText} - ${await response.text()}`);
+      const responseText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${response.statusText} - ${responseText}`);
     }
 
     const content = await response.text();
@@ -106,10 +108,17 @@ module.exports = async (req, res) => {
         (match) => {
           // Skip if already proxied
           if (match.includes('/api/proxy')) return match;
-          // Ensure proper encoding for YouTube URLs
-          const encodedMatch = encodeURIComponent(match);
-          console.log('Rewriting URL:', match, 'to:', `/api/proxy?url=${encodedMatch}`);
-          return `/api/proxy?url=${encodedMatch}`;
+          
+          try {
+            // Parse and reconstruct the URL to ensure proper encoding
+            const matchUrl = new URL(match);
+            const encodedMatch = encodeURIComponent(matchUrl.toString());
+            console.log('Rewriting URL:', match, 'to:', `/api/proxy?url=${encodedMatch}`);
+            return `/api/proxy?url=${encodedMatch}`;
+          } catch (e) {
+            console.error('Error rewriting URL:', e);
+            return match;
+          }
         }
       );
       return res.send(modifiedContent);
