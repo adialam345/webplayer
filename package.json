@@ -1,0 +1,17 @@
+{
+  "name": "hls-proxy",
+  "version": "1.0.0",
+  "description": "HLS Proxy Server for Video Streaming",
+  "main": "api/proxy.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "scripts": {
+    "start": "node api/proxy.js"
+  },
+  "author": "",
+  "license": "ISC"
+} 
