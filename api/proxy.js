@@ -16,8 +16,26 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing URL parameter' });
     }
     
-    // Double decode URL to handle double encoding from client
-    const targetUrl = decodeURIComponent(decodeURIComponent(encodedUrl));
+    // Safely decode URL - try both single and double decoding
+    let targetUrl;
+    try {
+      // First try single decode
+      targetUrl = decodeURIComponent(encodedUrl);
+      // Check if it needs another decode
+      if (targetUrl.includes('%25')) {
+        targetUrl = decodeURIComponent(targetUrl);
+      }
+    } catch (e) {
+      console.error('URL decode error:', e);
+      return res.status(400).json({ error: 'Invalid URL encoding' });
+    }
+
+    // Prevent proxy loops
+    if (targetUrl.includes('/api/proxy')) {
+      return res.status(400).json({ error: 'Proxy loop detected' });
+    }
+
+    console.log('Fetching URL:', targetUrl);
     
     const response = await fetch(targetUrl, {
       headers: {
@@ -47,12 +65,15 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     
-    // If this is an m3u8 file, we need to rewrite the URLs to use our proxy
+    // If this is an m3u8 file, rewrite the URLs
     if (contentType === 'application/vnd.apple.mpegurl') {
-      // Only rewrite URLs that are not already proxied
       const modifiedContent = content.replace(
-        /(https?:\/\/[^"\n]+)(?!.*\/api\/proxy)/g,
-        (match) => `/api/proxy?url=${encodeURIComponent(encodeURIComponent(match))}`
+        /(https?:\/\/[^"\n\s]+)/g,
+        (match) => {
+          // Skip if already proxied
+          if (match.includes('/api/proxy')) return match;
+          return `/api/proxy?url=${encodeURIComponent(match)}`;
+        }
       );
       return res.send(modifiedContent);
     }
