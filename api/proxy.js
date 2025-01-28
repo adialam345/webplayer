@@ -2,6 +2,14 @@
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    return res.status(200).end();
+  }
+
   try {
     const encodedUrl = req.query.url;
     if (!encodedUrl) {
@@ -29,9 +37,24 @@ module.exports = async (req, res) => {
     // Set comprehensive CORS and content headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    
+    // Set content type based on the URL
+    const contentType = targetUrl.endsWith('.m3u8') ? 
+      'application/vnd.apple.mpegurl' : 
+      'application/octet-stream';
+    
+    res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    
+    // If this is an m3u8 file, we need to rewrite the URLs to use our proxy
+    if (contentType === 'application/vnd.apple.mpegurl') {
+      const modifiedContent = content.replace(
+        /(https?:\/\/[^"\n]+)/g,
+        (match) => `/api/proxy?url=${encodeURIComponent(encodeURIComponent(match))}`
+      );
+      return res.send(modifiedContent);
+    }
     
     return res.send(content);
 

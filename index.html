@@ -89,7 +89,12 @@
                 enableWorker: true,
                 lowLatencyMode: true,
                 backBufferLength: 90,
-                xhrSetup: function(xhr) {
+                xhrSetup: function(xhr, url) {
+                    // If the URL is not already proxied, proxy it
+                    if (!url.startsWith('/api/proxy')) {
+                        const newUrl = `/api/proxy?url=${encodeURIComponent(encodeURIComponent(url))}`;
+                        xhr.open('GET', newUrl, true);
+                    }
                     xhr.withCredentials = false;
                 }
             });
@@ -101,7 +106,7 @@
                         case Hls.ErrorTypes.NETWORK_ERROR:
                             showError('Kesalahan jaringan. Mencoba memuat ulang...');
                             console.log('Mencoba memuat ulang karena network error');
-                            hls.startLoad();
+                            setTimeout(() => hls.startLoad(), 1000);
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             showError('Kesalahan media. Mencoba recovery...');
