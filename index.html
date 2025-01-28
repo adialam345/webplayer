@@ -90,8 +90,8 @@
                 lowLatencyMode: true,
                 backBufferLength: 90,
                 xhrSetup: function(xhr, url) {
-                    // If the URL is not already proxied, proxy it
-                    if (!url.startsWith('/api/proxy')) {
+                    // Only proxy URLs that aren't already proxied
+                    if (!url.includes('/api/proxy') && !url.startsWith('/')) {
                         const newUrl = `/api/proxy?url=${encodeURIComponent(encodeURIComponent(url))}`;
                         xhr.open('GET', newUrl, true);
                     }
@@ -106,7 +106,7 @@
                         case Hls.ErrorTypes.NETWORK_ERROR:
                             showError('Kesalahan jaringan. Mencoba memuat ulang...');
                             console.log('Mencoba memuat ulang karena network error');
-                            setTimeout(() => hls.startLoad(), 1000);
+                            setTimeout(() => hls.startLoad(), 2000); // Increased retry delay
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             showError('Kesalahan media. Mencoba recovery...');

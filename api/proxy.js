@@ -49,8 +49,9 @@ module.exports = async (req, res) => {
     
     // If this is an m3u8 file, we need to rewrite the URLs to use our proxy
     if (contentType === 'application/vnd.apple.mpegurl') {
+      // Only rewrite URLs that are not already proxied
       const modifiedContent = content.replace(
-        /(https?:\/\/[^"\n]+)/g,
+        /(https?:\/\/[^"\n]+)(?!.*\/api\/proxy)/g,
         (match) => `/api/proxy?url=${encodeURIComponent(encodeURIComponent(match))}`
       );
       return res.send(modifiedContent);
