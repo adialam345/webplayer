@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vercel HLS Player</title>
+    <style>
+        /* CSS tetap sama */
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <video id="video" controls playsinline></video>
+        <div class="loading">Memuat video...</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        const video = document.getElementById('video');
+        const loading = document.querySelector('.loading');
+        
+        // URL asli stream HLS
+        const originalStreamUrl = 'https://manifest.googlevideo.com/api/manifest/hls_variant/expire/1738074013/ei/PZOYZ5jOF4akqfkPtvLjgAw/ip/203.175.124.196/id/t_nFGWJI_tI.1/source/yt_live_broadcast/requiressl/yes/xpc/EgVo2aDSNQ%3D%3D/tx/51357436/txs/51357435%2C51357436%2C51357437/hfr/1/playlist_duration/30/manifest_duration/30/maxh/4320/maudio/1/gcr/id/siu/1/bui/AY2Et-MvQlqGISYAXosYEsrJWI6xi0l7mO4CGr4WHs2egnwJQlcAHKwZSgtzFlSp1rwkVj5gJA/spc/9kzgDfw9rHm2FXv5COXUXcjKM1E5po1NopLSVwWbjocBFqaB_3aq-16oCupN6IRSbQ4DNP-UxiXc/vprv/1/go/1/rqh/5/pacing/0/nvgoi/1/keepalive/yes/fexp/51326932%2C51353498%2C51355912/dover/11/itag/0/playlist_type/DVR/sparams/expire%2Cei%2Cip%2Cid%2Csource%2Crequiressl%2Cxpc%2Ctx%2Ctxs%2Chfr%2Cplaylist_duration%2Cmanifest_duration%2Cmaxh%2Cmaudio%2Cgcr%2Csiu%2Cbui%2Cspc%2Cvprv%2Cgo%2Crqh%2Citag%2Cplaylist_type/sig/AJfQdSswRQIhAPrgp10orUh5fTyKW94wXlZLTouMJ_15ya-1_FWQ9nuZAiBOAFgyeMMY0F1SGocuETmPFNfMH38NNsvntjFM2A5XvQ%3D%3D/file/index.m3u8';
+        
+        // URL proxy melalui Vercel
+        const proxyUrl = `/api/proxy?url=${encodeURIComponent(originalStreamUrl)}`;
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                xhrSetup: function(xhr) {
+                    xhr.withCredentials = false; // Non-aktifkan credentials
+                }
+            });
+            
+            hls.loadSource(proxyUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play();
+                loading.style.display = 'none';
+            });
+            
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error('Error:', data);
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = proxyUrl;
+            video.addEventListener('loadedmetadata', () => {
+                video.play();
+                loading.style.display = 'none';
+            });
+        }
+        
+        // Event handler fullscreen tetap sama
+    </script>
+</body>
+</html>
